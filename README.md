@@ -15,5 +15,5 @@ git clone https://github.com/hcpl/classify-review-gtk
 ## Running
 
 ```shell
-./classify-review-gtk
+./classify-review-gtk --checkpoint_dir "${YOUR_LAST_CHECKPOINT}"
 ```
