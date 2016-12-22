@@ -1,6 +1,9 @@
+# TensorFlow
 runs/*
 
+# Python
 __pycache__/*
 
+# Backups by editors
 *~
 *.sw?
