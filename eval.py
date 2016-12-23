@@ -27,7 +27,7 @@ tf.flags.DEFINE_string("negative_data_file", "./data/kinopoisk/polarity.neg", "D
 
 # Eval Parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
-tf.flags.DEFINE_string("checkpoint_dir", "", "Checkpoint directory from training run")
+tf.flags.DEFINE_string("checkpoint_dir", None, "Checkpoint directory from training run")
 tf.flags.DEFINE_boolean("eval_train", False, "Evaluate on all training data")
 tf.flags.DEFINE_string("eval_input", None, "Evaluate the provided input")
 
@@ -40,12 +40,28 @@ tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device 
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
 
 
+def error_exit(msg, exit_code=1):
+    logger.error(msg)
+    sys.exit(exit_code)
+
+
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
 logger.info("\nParameters:")
 for attr, value in sorted(FLAGS.__flags.items()):
     logger.info("{}={}".format(attr.upper(), value))
 logger.info("")
+
+if not FLAGS.checkpoint_dir:
+    if os.path.exists("runs"):
+        runs = os.listdir("runs")
+        if len(runs) > 0:
+            FLAGS.checkpoint_dir = os.path.join("runs", str(max(map(int, runs))), "checkpoints")
+            logger.info("Chosen checkpoint directory: {}".format(FLAGS.checkpoint_dir))
+        else:
+            error_exit("No runs in runs/ directory")
+    else:
+        error_exit("No checkpoint directory specified and no runs/ directory found")
 
 # CHANGE THIS: Load data. Load your own data here
 if FLAGS.eval_train:

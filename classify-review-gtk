@@ -6,12 +6,19 @@ from gi.repository import Gdk, Gtk
 
 import argparse
 import logging
+import os
 import subprocess
+import sys
 
 
 logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
+
+def error_exit(msg, exit_code=1):
+    logger.error(msg)
+    sys.exit(exit_code)
 
 
 class ReviewWindow(Gtk.Window):
@@ -22,22 +29,36 @@ class ReviewWindow(Gtk.Window):
 
 class ReviewBox(Gtk.Box):
     def __init__(self, args):
-        super().__init__()
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
-        self.args = args
         self.css_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            self.css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        if args.checkpoint_dir:
+            self.checkpoint_dir = args.checkpoint_dir
+            logger.info("Specified checkpoint directory: {}".format(self.checkpoint_dir))
+        elif os.path.exists("runs"):
+            runs = os.listdir("runs")
+            if len(runs) > 0:
+                self.checkpoint_dir = os.path.join("runs", str(max(map(int, runs))), "checkpoints")
+                logger.info("Chosen checkpoint directory: {}".format(self.checkpoint_dir))
+            else:
+                error_exit("No runs in runs/ directory")
+        else:
+            error_exit("No checkpoint directory specified and no runs/ directory found")
 
         entry = Gtk.Entry()
-        self.pack_start(entry, True, True, 0)
-
         entry.connect("activate", self.process_input)
-        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.pack_start(entry, False, False, 0)
 
     def process_input(self, widget):
         text = widget.props.text
 
         logger.info("Text: \"{}\"".format(text))
-        popen = subprocess.Popen(["./eval.py", "--checkpoint_dir", self.args.checkpoint_dir, "--eval_input", text, "--out_stdout"], stdout=subprocess.PIPE, universal_newlines=True)
+        popen = subprocess.Popen(["./eval.py", "--checkpoint_dir", self.checkpoint_dir, "--eval_input", text, "--out_stdout"], stdout=subprocess.PIPE, universal_newlines=True)
         (out, _) = popen.communicate()
         popen.wait()
 
@@ -52,7 +73,7 @@ class ReviewBox(Gtk.Box):
 def create_argument_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--checkpoint-dir", required=True)
+    parser.add_argument("-c", "--checkpoint-dir", metavar="DIR", help="Checkpoint directory from training run")
 
     return parser
 
